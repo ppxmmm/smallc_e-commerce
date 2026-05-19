@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -27,7 +28,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(ctx context.Context, name,email, passwordHash, role string) (*model.User, error) {
+func (r *UserRepository) Create(ctx context.Context, name, email, passwordHash, role string) (*model.User, error) {
 	query := `
 		INSERT INTO users (name, email, password_hash, role)
 		VALUES (?, ?, ?, ?)
@@ -83,18 +84,45 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
+const productSelectFields = `
+	id,
+	seller_id,
+	name,
+	COALESCE(description, ''),
+	COALESCE(category, ''),
+	COALESCE(brand, ''),
+	price,
+	original_price,
+	COALESCE(rating, 0),
+	stock,
+	COALESCE(tone, ''),
+	COALESCE(subtitle, ''),
+	COALESCE(image, ''),
+	COALESCE(features, '[]'),
+	COALESCE(highlights, '[]'),
+	COALESCE(specifications, '[]'),
+	COALESCE(delivery, ''),
+	created_at
+`
+
 func (r *ProductRepository) List(ctx context.Context, filters ProductFilters) ([]model.Product, error) {
-	query := `
-		SELECT id, seller_id, name, COALESCE(description, ''), price, stock, created_at
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM products
 		WHERE 1 = 1
-	`
+	`, productSelectFields)
 
 	args := make([]any, 0, 2)
 	if filters.Search != "" {
-		query += ` AND (LOWER(name) LIKE ? OR LOWER(COALESCE(description, '')) LIKE ?)`
+		query += ` AND (
+			LOWER(name) LIKE ?
+			OR LOWER(COALESCE(description, '')) LIKE ?
+			OR LOWER(COALESCE(category, '')) LIKE ?
+			OR LOWER(COALESCE(brand, '')) LIKE ?
+			OR LOWER(COALESCE(subtitle, '')) LIKE ?
+		)`
 		search := "%" + strings.ToLower(filters.Search) + "%"
-		args = append(args, search, search)
+		args = append(args, search, search, search, search, search)
 	}
 
 	if filters.SellerID != nil {
@@ -113,15 +141,7 @@ func (r *ProductRepository) List(ctx context.Context, filters ProductFilters) ([
 	products := make([]model.Product, 0)
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(
-			&product.ID,
-			&product.SellerID,
-			&product.Name,
-			&product.Description,
-			&product.Price,
-			&product.Stock,
-			&product.CreatedAt,
-		); err != nil {
+		if err := scanProduct(rows, &product); err != nil {
 			return nil, fmt.Errorf("scan product: %w", err)
 		}
 
@@ -137,91 +157,227 @@ func (r *ProductRepository) List(ctx context.Context, filters ProductFilters) ([
 
 func (r *ProductRepository) GetByID(ctx context.Context, productID int64) (*model.Product, error) {
 	product := &model.Product{}
-	err := r.db.QueryRowContext(
+	if err := scanProduct(productRowScanner{row: r.db.QueryRowContext(
 		ctx,
-		`SELECT id, seller_id, name, COALESCE(description, ''), price, stock, created_at
-		 FROM products
-		 WHERE id = ?`,
+		fmt.Sprintf(`SELECT %s FROM products WHERE id = ?`, productSelectFields),
 		productID,
-	).Scan(
-		&product.ID,
-		&product.SellerID,
-		&product.Name,
-		&product.Description,
-		&product.Price,
-		&product.Stock,
-		&product.CreatedAt,
-	)
-	if err != nil {
+	)}, product); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrProductNotFound
 		}
-
-		return nil, fmt.Errorf("get product by id: %w", err)
+		return nil, fmt.Errorf("decode product by id: %w", err)
 	}
 
 	return product, nil
 }
 
-func (r *ProductRepository) Create(ctx context.Context, sellerID int64, name, description string, price, stock int64) (*model.Product, error) {
+func (r *ProductRepository) Create(ctx context.Context, sellerID int64, input model.ProductInput) (*model.Product, error) {
 	product := &model.Product{}
-	err := r.db.QueryRowContext(
-		ctx,
-		`INSERT INTO products (seller_id, name, description, price, stock)
-		 VALUES (?, ?, ?, ?, ?)
-		 RETURNING id, seller_id, name, COALESCE(description, ''), price, stock, created_at`,
-		sellerID,
-		name,
-		description,
-		price,
-		stock,
-	).Scan(
-		&product.ID,
-		&product.SellerID,
-		&product.Name,
-		&product.Description,
-		&product.Price,
-		&product.Stock,
-		&product.CreatedAt,
-	)
+	featuresJSON, highlightsJSON, specificationsJSON, err := encodeProductCollections(input)
 	if err != nil {
+		return nil, fmt.Errorf("encode product collections: %w", err)
+	}
+
+	originalPrice := any(nil)
+	if input.Original != nil {
+		originalPrice = *input.Original
+	}
+
+	if err := scanProduct(productRowScanner{row: r.db.QueryRowContext(
+		ctx,
+		`INSERT INTO products (
+			seller_id, name, description, category, brand, price, original_price, rating, stock,
+			tone, subtitle, image, features, highlights, specifications, delivery
+		)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 RETURNING `+productSelectFields,
+		sellerID,
+		input.Name,
+		input.Description,
+		input.Category,
+		input.Brand,
+		input.Price,
+		originalPrice,
+		input.Rating,
+		input.Stock,
+		input.Tone,
+		input.Subtitle,
+		input.Image,
+		featuresJSON,
+		highlightsJSON,
+		specificationsJSON,
+		input.Delivery,
+	)}, product); err != nil {
 		return nil, fmt.Errorf("create product: %w", err)
 	}
 
 	return product, nil
 }
 
-func (r *ProductRepository) Update(ctx context.Context, productID int64, name, description string, price, stock int64) (*model.Product, error) {
+func (r *ProductRepository) Update(ctx context.Context, productID int64, input model.ProductInput) (*model.Product, error) {
 	product := &model.Product{}
-	err := r.db.QueryRowContext(
+	featuresJSON, highlightsJSON, specificationsJSON, err := encodeProductCollections(input)
+	if err != nil {
+		return nil, fmt.Errorf("encode product collections: %w", err)
+	}
+
+	originalPrice := any(nil)
+	if input.Original != nil {
+		originalPrice = *input.Original
+	}
+
+	if err := scanProduct(productRowScanner{row: r.db.QueryRowContext(
 		ctx,
 		`UPDATE products
-		 SET name = ?, description = ?, price = ?, stock = ?
+		 SET name = ?, description = ?, category = ?, brand = ?, price = ?, original_price = ?,
+		     rating = ?, stock = ?, tone = ?, subtitle = ?, image = ?, features = ?,
+		     highlights = ?, specifications = ?, delivery = ?
 		 WHERE id = ?
-		 RETURNING id, seller_id, name, COALESCE(description, ''), price, stock, created_at`,
-		name,
-		description,
-		price,
-		stock,
+		 RETURNING `+productSelectFields,
+		input.Name,
+		input.Description,
+		input.Category,
+		input.Brand,
+		input.Price,
+		originalPrice,
+		input.Rating,
+		input.Stock,
+		input.Tone,
+		input.Subtitle,
+		input.Image,
+		featuresJSON,
+		highlightsJSON,
+		specificationsJSON,
+		input.Delivery,
 		productID,
-	).Scan(
-		&product.ID,
-		&product.SellerID,
-		&product.Name,
-		&product.Description,
-		&product.Price,
-		&product.Stock,
-		&product.CreatedAt,
-	)
-	if err != nil {
+	)}, product); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrProductNotFound
 		}
-
 		return nil, fmt.Errorf("update product: %w", err)
 	}
 
 	return product, nil
+}
+
+type productScanner interface {
+	Scan(dest ...any) error
+}
+
+type productRowScanner struct {
+	row *sql.Row
+}
+
+func (s productRowScanner) Scan(dest ...any) error {
+	return s.row.Scan(dest...)
+}
+
+func scanProduct(scanner productScanner, product *model.Product) error {
+	var originalPrice sql.NullInt64
+	var featuresJSON string
+	var highlightsJSON string
+	var specificationsJSON string
+
+	if err := scanner.Scan(
+		&product.ID,
+		&product.SellerID,
+		&product.Name,
+		&product.Description,
+		&product.Category,
+		&product.Brand,
+		&product.Price,
+		&originalPrice,
+		&product.Rating,
+		&product.Stock,
+		&product.Tone,
+		&product.Subtitle,
+		&product.Image,
+		&featuresJSON,
+		&highlightsJSON,
+		&specificationsJSON,
+		&product.Delivery,
+		&product.CreatedAt,
+	); err != nil {
+		return err
+	}
+
+	product.Original = nil
+	if originalPrice.Valid {
+		value := originalPrice.Int64
+		product.Original = &value
+	}
+
+	features, err := parseStringSlice(featuresJSON)
+	if err != nil {
+		return fmt.Errorf("parse features: %w", err)
+	}
+	highlights, err := parseStringSlice(highlightsJSON)
+	if err != nil {
+		return fmt.Errorf("parse highlights: %w", err)
+	}
+	specifications, err := parseStringMatrix(specificationsJSON)
+	if err != nil {
+		return fmt.Errorf("parse specifications: %w", err)
+	}
+
+	product.Features = features
+	product.Highlights = highlights
+	product.Specifications = specifications
+
+	return nil
+}
+
+func encodeProductCollections(input model.ProductInput) (string, string, string, error) {
+	featuresJSON, err := json.Marshal(input.Features)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	highlightsJSON, err := json.Marshal(input.Highlights)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	specificationsJSON, err := json.Marshal(input.Specifications)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return string(featuresJSON), string(highlightsJSON), string(specificationsJSON), nil
+}
+
+func parseStringSlice(raw string) ([]string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return []string{}, nil
+	}
+
+	var values []string
+	if err := json.Unmarshal([]byte(raw), &values); err != nil {
+		return nil, err
+	}
+
+	if values == nil {
+		return []string{}, nil
+	}
+
+	return values, nil
+}
+
+func parseStringMatrix(raw string) ([][]string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return [][]string{}, nil
+	}
+
+	var values [][]string
+	if err := json.Unmarshal([]byte(raw), &values); err != nil {
+		return nil, err
+	}
+
+	if values == nil {
+		return [][]string{}, nil
+	}
+
+	return values, nil
 }
 
 func (r *ProductRepository) Delete(ctx context.Context, productID int64) error {

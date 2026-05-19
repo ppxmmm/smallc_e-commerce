@@ -10,15 +10,20 @@ import { WishlistButton } from "@/components/storefront/WishlistButton";
 import { formatBaht } from "@/lib/cartMath.mjs";
 import type { StorefrontProduct } from "@/components/storefront/StorefrontUi";
 import { useCartActions } from "@/hooks/useCartActions";
-import { products } from "@/lib/products.mjs";
 
 type ProductDetailPageProps = {
   product: StorefrontProduct;
+  relatedProducts: StorefrontProduct[];
   userEmail?: string;
   onSignOut: () => void;
 };
 
-export function ProductDetailPage({ product, userEmail, onSignOut }: ProductDetailPageProps) {
+export function ProductDetailPage({
+  product,
+  relatedProducts,
+  userEmail,
+  onSignOut,
+}: ProductDetailPageProps) {
   const router = useRouter();
   const { addToCart } = useCartActions();
   const [cartMessage, setCartMessage] = useState("");
@@ -33,11 +38,6 @@ export function ProductDetailPage({ product, userEmail, onSignOut }: ProductDeta
     addToCart(product);
     router.push("/checkout");
   }
-
-  const relatedProducts = products
-    .filter((item) => item.category === product.category && item.id !== product.id)
-    .concat(products.filter((item) => item.category !== product.category && item.id !== product.id))
-    .slice(0, 4);
 
   return (
     <main className="min-h-screen bg-white text-slate-950">

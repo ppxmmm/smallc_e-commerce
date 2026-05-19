@@ -34,7 +34,7 @@ func NewAuthService(userRepository *repository.UserRepository, jwtSecret string,
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context,name, email,password, role string) (*model.User, error) {
+func (s *AuthService) Register(ctx context.Context, name, email, password, role string) (*model.User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	role = strings.TrimSpace(strings.ToLower(role))
 
@@ -51,7 +51,7 @@ func (s *AuthService) Register(ctx context.Context,name, email,password, role st
 		return nil, err
 	}
 
-	return s.userRepository.Create(ctx, name ,email, passwordHash, role)
+	return s.userRepository.Create(ctx, name, email, passwordHash, role)
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
@@ -109,20 +109,18 @@ func (s *ProductService) GetProduct(ctx context.Context, productID int64) (*mode
 	return s.productRepository.GetByID(ctx, productID)
 }
 
-func (s *ProductService) CreateProduct(ctx context.Context, sellerID int64, name, description string, price, stock int64) (*model.Product, error) {
-	name = strings.TrimSpace(name)
-	description = strings.TrimSpace(description)
-	if sellerID <= 0 || name == "" || price < 0 || stock < 0 {
+func (s *ProductService) CreateProduct(ctx context.Context, sellerID int64, input model.ProductInput) (*model.Product, error) {
+	normalizedInput, err := normalizeProductInput(input)
+	if err != nil || sellerID <= 0 {
 		return nil, ErrProductValidation
 	}
 
-	return s.productRepository.Create(ctx, sellerID, name, description, price, stock)
+	return s.productRepository.Create(ctx, sellerID, normalizedInput)
 }
 
-func (s *ProductService) UpdateProduct(ctx context.Context, sellerID, productID int64, name, description string, price, stock int64) (*model.Product, error) {
-	name = strings.TrimSpace(name)
-	description = strings.TrimSpace(description)
-	if sellerID <= 0 || productID <= 0 || name == "" || price < 0 || stock < 0 {
+func (s *ProductService) UpdateProduct(ctx context.Context, sellerID, productID int64, input model.ProductInput) (*model.Product, error) {
+	normalizedInput, err := normalizeProductInput(input)
+	if err != nil || sellerID <= 0 || productID <= 0 {
 		return nil, ErrProductValidation
 	}
 
@@ -135,7 +133,7 @@ func (s *ProductService) UpdateProduct(ctx context.Context, sellerID, productID 
 		return nil, ErrProductForbidden
 	}
 
-	return s.productRepository.Update(ctx, productID, name, description, price, stock)
+	return s.productRepository.Update(ctx, productID, normalizedInput)
 }
 
 func (s *ProductService) DeleteProduct(ctx context.Context, sellerID, productID int64) error {
@@ -153,6 +151,82 @@ func (s *ProductService) DeleteProduct(ctx context.Context, sellerID, productID 
 	}
 
 	return s.productRepository.Delete(ctx, productID)
+}
+
+func normalizeProductInput(input model.ProductInput) (model.ProductInput, error) {
+	input.Name = strings.TrimSpace(input.Name)
+	input.Description = strings.TrimSpace(input.Description)
+	input.Category = strings.TrimSpace(input.Category)
+	input.Brand = strings.TrimSpace(input.Brand)
+	input.Tone = strings.TrimSpace(input.Tone)
+	input.Subtitle = strings.TrimSpace(input.Subtitle)
+	input.Image = strings.TrimSpace(input.Image)
+	input.Delivery = strings.TrimSpace(input.Delivery)
+
+	if input.Name == "" || input.Price < 0 || input.Stock < 0 || input.Rating < 0 || input.Rating > 5 {
+		return model.ProductInput{}, ErrProductValidation
+	}
+
+	if input.Original != nil {
+		original := *input.Original
+		if original < 0 {
+			return model.ProductInput{}, ErrProductValidation
+		}
+
+		input.Original = &original
+	}
+
+	input.Features = normalizeStringList(input.Features)
+	input.Highlights = normalizeStringList(input.Highlights)
+
+	specifications, err := normalizeSpecifications(input.Specifications)
+	if err != nil {
+		return model.ProductInput{}, ErrProductValidation
+	}
+	input.Specifications = specifications
+
+	return input, nil
+}
+
+func normalizeStringList(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+
+		normalized = append(normalized, trimmed)
+	}
+
+	return normalized
+}
+
+func normalizeSpecifications(values [][]string) ([][]string, error) {
+	if len(values) == 0 {
+		return [][]string{}, nil
+	}
+
+	normalized := make([][]string, 0, len(values))
+	for _, pair := range values {
+		if len(pair) != 2 {
+			return nil, ErrProductValidation
+		}
+
+		label := strings.TrimSpace(pair[0])
+		value := strings.TrimSpace(pair[1])
+		if label == "" || value == "" {
+			return nil, ErrProductValidation
+		}
+
+		normalized = append(normalized, []string{label, value})
+	}
+
+	return normalized, nil
 }
 
 type PaymentService struct {

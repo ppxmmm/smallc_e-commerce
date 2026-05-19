@@ -1,24 +1,22 @@
-import { defaultCartItems } from "./products.mjs";
-
 const CART_KEY = "smallc:cart";
 const COUPON_KEY = "smallc:appliedCoupon";
 const CART_EVENT = "smallc:cart-updated";
 
 function readCart() {
   if (typeof window === "undefined") {
-    return defaultCartItems();
+    return [];
   }
 
   const raw = window.sessionStorage.getItem(CART_KEY);
   if (!raw) {
-    return defaultCartItems();
+    return [];
   }
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : defaultCartItems();
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return defaultCartItems();
+    return [];
   }
 }
 
