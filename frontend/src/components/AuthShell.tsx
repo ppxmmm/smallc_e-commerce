@@ -19,7 +19,7 @@ export function AuthShell({
 
   return (
     <main className="h-screen overflow-hidden bg-[#f3f5f4] text-[#121b22]">
-      <section className="mx-auto grid h-screen w-full max-w-[1500px] grid-rows-[minmax(0,1fr)_72px] overflow-hidden rounded-none border border-[#dfe5e3] bg-white shadow-[0_24px_80px_rgba(17,28,35,0.08)] lg:rounded-lg">
+      <section className="mx-auto grid h-screen w-full max-w-[1500px] grid-rows-1 overflow-hidden rounded-none border border-[#dfe5e3] bg-white shadow-[0_24px_80px_rgba(17,28,35,0.08)] sm:grid-rows-[minmax(0,1fr)_72px] lg:rounded-lg">
         <div className="grid min-h-0 lg:grid-cols-[1.15fr_0.85fr]">
         <aside className="relative min-h-0 overflow-hidden bg-white px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="relative z-10 max-w-xl">
@@ -117,7 +117,7 @@ export function AuthShell({
 
 function AuthFooter() {
   return (
-    <footer className="grid grid-cols-2 items-center border-t border-[#dfe5e3] bg-white px-6 text-sm font-medium text-[#66717a] sm:grid-cols-4 sm:px-14">
+    <footer className="hidden grid-cols-4 items-center border-t border-[#dfe5e3] bg-white px-14 text-sm font-medium text-[#66717a] sm:grid">
       {[
         ["shipping", "Free shipping on orders $50+"],
         ["returns", "Easy returns within 30 days"],
