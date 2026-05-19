@@ -25,7 +25,7 @@ export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
   }, []);
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="flex min-h-screen flex-col bg-white text-slate-950">
       <CustomerHeader onSignOut={onSignOut} userEmail={userEmail} />
 
       <section className="m-3 grid gap-5 max-xl:grid-cols-1 xl:grid-cols-[320px_320px_1fr]">

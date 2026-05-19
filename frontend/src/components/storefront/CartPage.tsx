@@ -43,7 +43,7 @@ export function CartPage({ userEmail, onSignOut }: CartPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="flex min-h-screen flex-col bg-white text-slate-950">
       <CustomerHeader onSignOut={onSignOut} userEmail={userEmail} />
 
       <section className="m-3 max-w-3xl rounded-lg border border-slate-200 p-6">

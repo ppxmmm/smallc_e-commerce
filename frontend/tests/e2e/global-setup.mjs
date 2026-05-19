@@ -3,11 +3,11 @@ const apiUrl = (process.env.SMALLC_API_URL ?? "http://127.0.0.1:8080").replace(
   "",
 );
 
-async function seedUser({ email, password, role }) {
+async function seedUser({ name, email, password, role }) {
   const response = await fetch(`${apiUrl}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, role }),
+    body: JSON.stringify({ name, email, password, role }),
   });
 
   if (response.ok || response.status === 409) {
@@ -22,12 +22,14 @@ async function seedUser({ email, password, role }) {
 
 export default async function globalSetup() {
   await seedUser({
+    name: "SmallC Customer",
     email: "customer@smallc.test",
     password: "correct-password",
     role: "customer",
   });
 
   await seedUser({
+    name: "SmallC Seller",
     email: "seller@smallc.test",
     password: "correct-password",
     role: "seller",
