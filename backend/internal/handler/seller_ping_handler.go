@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	appMiddleware "smallc-ecommerce/internal/middleware"
+	"smallc-ecommerce/internal/model"
 	"smallc-ecommerce/internal/repository"
 	"smallc-ecommerce/internal/service"
 	"smallc-ecommerce/internal/util"
@@ -20,10 +21,21 @@ type SellerHandler struct {
 }
 
 type productUpsertRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Price       int64  `json:"price"`
-	Stock       int64  `json:"stock"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Category       string     `json:"category"`
+	Brand          string     `json:"brand"`
+	Price          int64      `json:"price"`
+	Original       *int64     `json:"original"`
+	Rating         float64    `json:"rating"`
+	Stock          int64      `json:"stock"`
+	Tone           string     `json:"tone"`
+	Subtitle       string     `json:"subtitle"`
+	Image          string     `json:"image"`
+	Features       []string   `json:"features"`
+	Highlights     []string   `json:"highlights"`
+	Specifications [][]string `json:"specifications"`
+	Delivery       string     `json:"delivery"`
 }
 
 func NewSellerHandler(productService *service.ProductService, sellerService *service.SellerService) *SellerHandler {
@@ -49,7 +61,7 @@ func (h *SellerHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := h.productService.CreateProduct(r.Context(), sellerID, request.Name, request.Description, request.Price, request.Stock)
+	product, err := h.productService.CreateProduct(r.Context(), sellerID, request.toInput())
 	if err != nil {
 		h.writeProductError(w, err, "failed to create product")
 		return
@@ -76,7 +88,7 @@ func (h *SellerHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := h.productService.UpdateProduct(r.Context(), sellerID, productID, request.Name, request.Description, request.Price, request.Stock)
+	product, err := h.productService.UpdateProduct(r.Context(), sellerID, productID, request.toInput())
 	if err != nil {
 		h.writeProductError(w, err, "failed to update product")
 		return
@@ -161,6 +173,26 @@ func (h *SellerHandler) decodeProductRequest(w http.ResponseWriter, r *http.Requ
 	}
 
 	return request, true
+}
+
+func (r productUpsertRequest) toInput() model.ProductInput {
+	return model.ProductInput{
+		Name:           r.Name,
+		Description:    r.Description,
+		Category:       r.Category,
+		Brand:          r.Brand,
+		Price:          r.Price,
+		Original:       r.Original,
+		Rating:         r.Rating,
+		Stock:          r.Stock,
+		Tone:           r.Tone,
+		Subtitle:       r.Subtitle,
+		Image:          r.Image,
+		Features:       r.Features,
+		Highlights:     r.Highlights,
+		Specifications: r.Specifications,
+		Delivery:       r.Delivery,
+	}
 }
 
 func (h *SellerHandler) writeProductError(w http.ResponseWriter, err error, fallbackMessage string) {

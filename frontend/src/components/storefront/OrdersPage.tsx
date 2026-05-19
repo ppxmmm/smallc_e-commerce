@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react";
 import { CustomerHeader, StorefrontFooter } from "@/components/storefront/CustomerHeader";
 import { DataTable, OrderSummary } from "@/components/storefront/StorefrontUi";
-import { calculateCart } from "@/lib/cartMath.mjs";
-import { getAppliedCoupon, getCart } from "@/lib/cartStorage.mjs";
-import { customerOrderRows } from "@/lib/products.mjs";
+import { formatBaht } from "@/lib/cartMath.mjs";
+import { getAuthToken } from "@/lib/authSession.mjs";
+import { fetchCustomerOrders } from "@/lib/products.mjs";
+
+type CustomerOrder = {
+  id: number;
+  total_amount: number;
+  status: string;
+  items: Array<{ fulfillment_status: string }>;
+};
 
 type OrdersPageProps = {
   userEmail?: string;
@@ -15,8 +22,11 @@ type OrdersPageProps = {
 let orderConfirmationHandled = false;
 
 export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const totals = calculateCart(getCart(), getAppliedCoupon());
+  const [showConfirmation] = useState(readOrderPlacedFlag);
+  const [confirmationTotals] = useState(readOrderSummary);
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (orderConfirmationHandled) {
@@ -45,7 +55,7 @@ export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
             </span>
             <h1 className="mt-4 text-2xl font-black">Thank you for your order!</h1>
             <p className="text-slate-500">Your payment was successful.</p>
-            <OrderSummary totals={totals} />
+            <OrderSummary totals={confirmationTotals} />
           </article>
         ) : null}
 
@@ -55,7 +65,7 @@ export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
             (step, index) => (
               <p className="mt-4 flex gap-3" key={step}>
                 <span
-                  className={`mt-1 size-3 rounded-full ${index < 3 ? "bg-emerald-600" : "bg-slate-300"}`}
+                  className={`mt-1 size-3 rounded-full ${index < timelineStepCount(latestOrder) ? "bg-emerald-600" : "bg-slate-300"}`}
                 />
                 {step}
               </p>
@@ -65,14 +75,106 @@ export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
 
         <article className="rounded-lg border border-slate-200 p-5">
           <h2 className="text-2xl font-black">My Orders</h2>
-          <DataTable
-            headers={["Order ID", "Payment", "Fulfillment", "Total"]}
-            rows={customerOrderRows}
-          />
+          {loading ? (
+            <p className="mt-4 text-slate-500">Loading orders...</p>
+          ) : error ? (
+            <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+              {error}
+            </p>
+          ) : orderRows.length ? (
+            <DataTable
+              headers={["Order ID", "Payment", "Fulfillment", "Total"]}
+              rows={orderRows}
+            />
+          ) : (
+            <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
+              No orders yet. Place your first order from the shop.
+            </p>
+          )}
         </article>
       </section>
 
       <StorefrontFooter />
     </main>
   );
+}
+
+function sentenceCase(value: string) {
+  if (!value) {
+    return "Pending";
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function readOrderPlacedFlag() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.sessionStorage.getItem("smallc:orderPlaced") === "true";
+}
+
+function readOrderSummary() {
+  const emptySummary = {
+    subtotal: 0,
+    shipping: 0,
+    discount: 0,
+    total: 0,
+    appliedCoupon: "",
+  };
+
+  if (typeof window === "undefined") {
+    return emptySummary;
+  }
+
+  const rawSummary = window.sessionStorage.getItem("smallc:orderSummary");
+  if (!rawSummary) {
+    return emptySummary;
+  }
+
+  try {
+    return JSON.parse(rawSummary);
+  } catch {
+    return emptySummary;
+  }
+}
+
+function summarizeFulfillment(items: Array<{ fulfillment_status: string }>) {
+  if (!items.length) {
+    return "Pending";
+  }
+
+  if (items.every((item) => item.fulfillment_status === "delivered")) {
+    return "Delivered";
+  }
+
+  if (items.some((item) => item.fulfillment_status === "shipped")) {
+    return "Shipped";
+  }
+
+  if (items.some((item) => item.fulfillment_status === "processing")) {
+    return "Processing";
+  }
+
+  return "Pending";
+}
+
+function timelineStepCount(order?: CustomerOrder) {
+  if (!order) {
+    return 1;
+  }
+
+  if (order.status === "paid") {
+    const fulfillment = summarizeFulfillment(order.items);
+    if (fulfillment === "Delivered") {
+      return 5;
+    }
+    if (fulfillment === "Shipped") {
+      return 4;
+    }
+    return 3;
+  }
+
+  return 1;
 }

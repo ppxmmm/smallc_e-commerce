@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CustomerHeader, StorefrontFooter } from "@/components/storefront/CustomerHeader";
 import { OrderSummary } from "@/components/storefront/StorefrontUi";
 import { calculateCart } from "@/lib/cartMath.mjs";
-import { getAppliedCoupon, getCart } from "@/lib/cartStorage.mjs";
+import { getAuthToken } from "@/lib/authSession.mjs";
+import { completeMockPayment, createOrder } from "@/lib/products.mjs";
+import {
+  getAppliedCoupon,
+  getCart,
+  setAppliedCoupon as persistAppliedCoupon,
+  setCart as persistCart,
+} from "@/lib/cartStorage.mjs";
 
 type CheckoutPageProps = {
   userEmail?: string;
@@ -19,28 +26,45 @@ export function CheckoutPage({ userEmail, onSignOut }: CheckoutPageProps) {
   const [paymentState, setPaymentState] = useState<"idle" | "loading" | "success" | "error">(
     "idle",
   );
-  const [cart, setCart] = useState(getCart);
-  const [appliedCoupon, setAppliedCoupon] = useState(getAppliedCoupon);
-
-  useEffect(() => {
-    setCart(getCart());
-    setAppliedCoupon(getAppliedCoupon());
-  }, []);
+  const [cart] = useState(getCart);
+  const [appliedCoupon] = useState(getAppliedCoupon);
 
   const totals = calculateCart(cart, appliedCoupon);
 
-  function placeOrder() {
-    setPaymentState("loading");
-    window.setTimeout(() => {
-      if (payment === "Cash on Delivery") {
-        setPaymentState("error");
-        return;
-      }
+  async function placeOrder() {
+    if (payment === "Cash on Delivery") {
+      setPaymentState("error");
+      return;
+    }
 
-      setPaymentState("success");
+    const token = getAuthToken();
+    if (!token) {
+      setPaymentState("error");
+      return;
+    }
+
+    setPaymentState("loading");
+
+    try {
+      const response = await createOrder(
+        token,
+        cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+        })),
+      );
+
+      await completeMockPayment(token, response.order.id, response.payment.payment_ref, "paid");
+
       window.sessionStorage.setItem("smallc:orderPlaced", "true");
+      window.sessionStorage.setItem("smallc:orderSummary", JSON.stringify(totals));
+      persistCart([]);
+      persistAppliedCoupon("");
+      setPaymentState("success");
       router.push("/orders");
-    }, 500);
+    } catch {
+      setPaymentState("error");
+    }
   }
 
   return (

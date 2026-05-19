@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CustomerHeader, StorefrontFooter } from "@/components/storefront/CustomerHeader";
 import {
   ProductArt,
@@ -10,7 +10,7 @@ import {
 import type { StorefrontProduct } from "@/components/storefront/StorefrontUi";
 import { ProductSearchBar } from "@/components/storefront/ProductSearchBar";
 import { useCartActions } from "@/hooks/useCartActions";
-import { categories, products } from "@/lib/products.mjs";
+import { buildCategories, fetchProducts } from "@/lib/products.mjs";
 
 type CustomerStorefrontProps = {
   userEmail?: string;
@@ -19,16 +19,60 @@ type CustomerStorefrontProps = {
 
 export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontProps) {
   const { addToCart } = useCartActions();
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("Best selling");
   const [cartMessage, setCartMessage] = useState("");
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        setError("");
+        const nextProducts = await fetchProducts();
+        if (!isActive) {
+          return;
+        }
+
+        setProducts(nextProducts);
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+
+        setError(loadError instanceof Error ? loadError.message : "Failed to load products.");
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   function handleAddToCart(product: StorefrontProduct) {
     addToCart(product);
     setCartMessage(`Added ${product.name} to cart`);
     window.setTimeout(() => setCartMessage(""), 2500);
   }
+
+  const categories = useMemo(() => buildCategories(products), [products]);
+  const categoryCounts = useMemo(() => {
+    return products.reduce<Record<string, number>>((counts, product) => {
+      counts[product.category] = (counts[product.category] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const value = query.trim().toLowerCase();
@@ -43,7 +87,7 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
       if (sort === "Best rated") return b.rating - a.rating;
       return b.stock - a.stock;
     });
-  }, [category, query, sort]);
+  }, [category, products, query, sort]);
 
   return (
     <main className="flex min-h-screen flex-col bg-white text-slate-950">
@@ -123,7 +167,7 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
 
       <Section id="categories" title="Shop by Category" subtitle="Browse our top categories">
         <div className="grid grid-cols-6 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
-          {categories.slice(1).map((item, index) => (
+          {categories.slice(1).map((item) => (
             <button
               className="rounded-lg border border-slate-200 p-4 text-center hover:border-emerald-400"
               onClick={() => setCategory(item)}
@@ -133,7 +177,7 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
               <div className="mb-3 h-24 rounded-lg bg-gradient-to-br from-slate-50 to-sky-100" />
               <strong>{item}</strong>
               <p className="text-sm text-slate-500">
-                {[2345, 4120, 1876, 1230, 2642, 1118][index].toLocaleString()} products
+                {(categoryCounts[item] ?? 0).toLocaleString()} products
               </p>
             </button>
           ))}
@@ -219,7 +263,15 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
                 </select>
               </label>
             </div>
-            {filteredProducts.length ? (
+            {loading ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-12 text-center text-slate-500">
+                Loading products...
+              </div>
+            ) : error ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-12 text-center text-red-700">
+                {error}
+              </div>
+            ) : filteredProducts.length ? (
               <ProductGrid products={filteredProducts} onAdd={handleAddToCart} />
             ) : (
               <div

@@ -7,7 +7,7 @@ import { ProductArt } from "@/components/storefront/StorefrontUi";
 import type { StorefrontProduct } from "@/components/storefront/StorefrontUi";
 import { useCartActions } from "@/hooks/useCartActions";
 import { formatBaht } from "@/lib/cartMath.mjs";
-import { products } from "@/lib/products.mjs";
+import { fetchProducts } from "@/lib/products.mjs";
 import {
   getWishlist,
   removeFromWishlist,
@@ -19,24 +19,50 @@ type WishlistPageProps = {
   onSignOut: () => void;
 };
 
-function enrichWishlistItem(item: StorefrontProduct): StorefrontProduct {
-  const catalogProduct = products.find((product) => product.id === item.id);
+function enrichWishlistItem(item: StorefrontProduct, catalog: StorefrontProduct[]): StorefrontProduct {
+  const catalogProduct = catalog.find((product) => product.id === item.id);
   return catalogProduct ? { ...catalogProduct, ...item } : item;
 }
 
 export function WishlistPage({ userEmail, onSignOut }: WishlistPageProps) {
   const { addToCart } = useCartActions();
+  const [catalog, setCatalog] = useState<StorefrontProduct[]>([]);
   const [items, setItems] = useState<StorefrontProduct[]>([]);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const sync = () => setItems(getWishlist().map(enrichWishlistItem));
-    sync();
-    return subscribeToWishlistUpdates(sync);
+    let isActive = true;
+
+    async function loadCatalog() {
+      try {
+        setError("");
+        const products = await fetchProducts();
+        if (isActive) {
+          setCatalog(products);
+        }
+      } catch (loadError) {
+        if (isActive) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load saved products.");
+        }
+      }
+    }
+
+    loadCatalog();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
+  useEffect(() => {
+    const sync = () => setItems(getWishlist().map((item) => enrichWishlistItem(item, catalog)));
+    sync();
+    return subscribeToWishlistUpdates(sync);
+  }, [catalog]);
+
   function handleAddToCart(product: StorefrontProduct) {
-    addToCart(enrichWishlistItem(product));
+    addToCart(enrichWishlistItem(product, catalog));
     setMessage(`Added ${product.name} to cart`);
     window.setTimeout(() => setMessage(""), 2500);
   }
@@ -62,7 +88,11 @@ export function WishlistPage({ userEmail, onSignOut }: WishlistPageProps) {
         <h1 className="text-3xl font-black">Favourites</h1>
         <p className="mt-1 text-slate-500">Products you saved for later.</p>
 
-        {items.length === 0 ? (
+        {error ? (
+          <p className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-center text-red-700">
+            {error}
+          </p>
+        ) : items.length === 0 ? (
           <p className="mt-8 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">
             No favourites yet. Tap the heart on any product to save it here.{" "}
             <Link className="font-bold text-emerald-700" href="/home#shop">
