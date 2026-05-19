@@ -144,48 +144,51 @@ Call log:
   29 |     await expect(page).toHaveURL(/\/checkout$/);
   30 | 
   31 |     await page.getByRole("button", { name: "Place Order" }).click();
-  32 |     await expect(page).toHaveURL(/\/orders$/);
-> 33 |     await expect(page.getByText("Thank you for your order!")).toBeVisible();
+  32 |     await expect(page.getByRole("button", { name: "Processing Payment..." })).toBeVisible();
+> 33 |     await expect(page).toHaveURL(/\/orders$/, { timeout: 10_000 });
      |                                                               ^ Error: expect(locator).toBeVisible() failed
-  34 |   });
-  35 | 
-  36 |   test("shop search exposes an empty state", async ({ page }) => {
-  37 |     await page.locator("#shop").scrollIntoViewIfNeeded();
-  38 |     await page.getByTestId("global-search").fill("not-a-real-product");
-  39 |     await expect(page.getByTestId("empty-state")).toContainText("No products found.");
-  40 |   });
-  41 | 
-  42 |   test("does not show checkout blocks on the home page", async ({ page }) => {
-  43 |     await expect(page.getByRole("heading", { name: "Cart & Checkout Preview" })).toHaveCount(0);
-  44 |     await expect(page.getByRole("heading", { name: "Shipping & Payment" })).toHaveCount(0);
-  45 |     await expect(page.getByRole("heading", { name: "Product Detail Preview" })).toHaveCount(0);
-  46 |     await expect(page.getByRole("heading", { name: "My Orders" })).toHaveCount(0);
-  47 |   });
-  48 | 
-  49 |   test("does not show the seller dashboard", async ({ page }) => {
-  50 |     await expect(page.getByRole("heading", { name: "Dashboard Overview" })).toHaveCount(0);
-  51 |     await expect(page.getByText("Seller Dashboard")).toHaveCount(0);
-  52 |   });
-  53 | });
-  54 | 
-  55 | test.describe("seller workspace", () => {
-  56 |   test.beforeEach(async ({ page }) => {
-  57 |     await loginAs(page, {
-  58 |       email: "seller@smallc.test",
-  59 |       password: "correct-password",
-  60 |     });
-  61 |   });
-  62 | 
-  63 |   test("seller dashboard includes product and order management", async ({ page }) => {
-  64 |     await expect(page.getByRole("heading", { name: "Dashboard Overview" })).toBeVisible();
-  65 |     await expect(page.getByRole("heading", { name: "Product Management" })).toBeVisible();
-  66 |     await expect(page.getByRole("heading", { name: "Order Management" })).toBeVisible();
-  67 |     await expect(page.getByText("Seller Dashboard")).toBeVisible();
-  68 |   });
-  69 | 
-  70 |   test("does not show the customer storefront hero", async ({ page }) => {
-  71 |     await expect(page.locator("h1", { hasText: "New Season Sale" })).toHaveCount(0);
-  72 |   });
-  73 | });
-  74 | 
+  34 |     await expect(
+  35 |       page.getByRole("heading", { name: "Thank you for your order!" }),
+  36 |     ).toBeVisible();
+  37 |   });
+  38 | 
+  39 |   test("shop search exposes an empty state", async ({ page }) => {
+  40 |     await page.locator("#shop").scrollIntoViewIfNeeded();
+  41 |     await page.getByTestId("global-search").fill("not-a-real-product");
+  42 |     await expect(page.getByTestId("empty-state")).toContainText("No products found.");
+  43 |   });
+  44 | 
+  45 |   test("does not show checkout blocks on the home page", async ({ page }) => {
+  46 |     await expect(page.getByRole("heading", { name: "Cart & Checkout Preview" })).toHaveCount(0);
+  47 |     await expect(page.getByRole("heading", { name: "Shipping & Payment" })).toHaveCount(0);
+  48 |     await expect(page.getByRole("heading", { name: "Product Detail Preview" })).toHaveCount(0);
+  49 |     await expect(page.getByRole("heading", { name: "My Orders" })).toHaveCount(0);
+  50 |   });
+  51 | 
+  52 |   test("does not show the seller dashboard", async ({ page }) => {
+  53 |     await expect(page.getByRole("heading", { name: "Dashboard Overview" })).toHaveCount(0);
+  54 |     await expect(page.getByText("Seller Dashboard")).toHaveCount(0);
+  55 |   });
+  56 | });
+  57 | 
+  58 | test.describe("seller workspace", () => {
+  59 |   test.beforeEach(async ({ page }) => {
+  60 |     await loginAs(page, {
+  61 |       email: "seller@smallc.test",
+  62 |       password: "correct-password",
+  63 |     });
+  64 |   });
+  65 | 
+  66 |   test("seller dashboard includes product and order management", async ({ page }) => {
+  67 |     await expect(page.getByRole("heading", { name: "Dashboard Overview" })).toBeVisible();
+  68 |     await expect(page.getByRole("heading", { name: "Product Management" })).toBeVisible();
+  69 |     await expect(page.getByRole("heading", { name: "Order Management" })).toBeVisible();
+  70 |     await expect(page.getByText("Seller Dashboard")).toBeVisible();
+  71 |   });
+  72 | 
+  73 |   test("does not show the customer storefront hero", async ({ page }) => {
+  74 |     await expect(page.locator("h1", { hasText: "New Season Sale" })).toHaveCount(0);
+  75 |   });
+  76 | });
+  77 | 
 ```
