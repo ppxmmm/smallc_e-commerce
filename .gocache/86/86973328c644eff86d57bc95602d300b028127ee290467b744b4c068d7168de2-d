@@ -1,5 +1,0 @@
-./admin_handler.go
-./auth_handler.go
-./customer_handler.go
-./router.go
-./system_handler.go

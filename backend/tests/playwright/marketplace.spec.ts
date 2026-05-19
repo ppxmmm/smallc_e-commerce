@@ -8,6 +8,7 @@ async function register(request: APIRequestContext, role: UserRole) {
   const email = uniqueEmail(role);
   const response = await request.post('/api/auth/register', {
     data: {
+      name: `${role} user`,
       email,
       password: 'secret123',
       role,

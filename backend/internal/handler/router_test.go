@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"strconv"
 	"testing"
 	"time"
@@ -81,6 +82,7 @@ func TestRegisterSuccessStoresHashedPassword(t *testing.T) {
 	ts := newTestServer(t)
 
 	status, body := doJSONRequest(t, ts.router, http.MethodPost, "/api/auth/register", map[string]string{
+		"name":     "Customer Example",
 		"email":    "customer@example.com",
 		"password": "secret123",
 		"role":     "customer",
@@ -88,6 +90,15 @@ func TestRegisterSuccessStoresHashedPassword(t *testing.T) {
 
 	if status != http.StatusCreated {
 		t.Fatalf("expected status %d, got %d with body %s", http.StatusCreated, status, string(body))
+	}
+
+	rawBody := string(body)
+	idIndex := strings.Index(rawBody, `"id"`)
+	nameIndex := strings.Index(rawBody, `"name"`)
+	emailIndex := strings.Index(rawBody, `"email"`)
+	roleIndex := strings.Index(rawBody, `"role"`)
+	if !(idIndex >= 0 && nameIndex > idIndex && emailIndex > nameIndex && roleIndex > emailIndex) {
+		t.Fatalf("expected response field order id,name,email,role; got %s", rawBody)
 	}
 
 	user, err := ts.userRepo.GetByEmail(t.Context(), "customer@example.com")
@@ -101,6 +112,14 @@ func TestRegisterSuccessStoresHashedPassword(t *testing.T) {
 
 	if err := auth.ComparePassword(user.PasswordHash, "secret123"); err != nil {
 		t.Fatalf("expected stored hash to match original password: %v", err)
+	}
+
+	if user.Name != "Customer Example" {
+		t.Fatalf("expected name column to store %q, got %q", "Customer Example", user.Name)
+	}
+
+	if user.Email != "customer@example.com" {
+		t.Fatalf("expected email column to store %q, got %q", "customer@example.com", user.Email)
 	}
 }
 
@@ -329,10 +348,49 @@ func TestPhase5SellerFulfillmentAndAdminDashboard(t *testing.T) {
 	}
 }
 
+func TestCustomerCanListOrders(t *testing.T) {
+	ts := newTestServer(t)
+
+	seller := registerAndLogin(t, ts, "orders-seller@example.com", model.RoleSeller)
+	customer := registerAndLogin(t, ts, "orders-customer@example.com", model.RoleCustomer)
+
+	product := createProduct(t, ts, seller.Token, "Desk Lamp", 1200, 5)
+	checkout := createOrder(t, ts, customer.Token, []map[string]any{
+		{"product_id": product.ID, "quantity": 2},
+	})
+
+	status, body := doJSONRequest(t, ts.router, http.MethodGet, "/api/orders", nil, customer.Token)
+	if status != http.StatusOK {
+		t.Fatalf("list orders failed with status %d body=%s", status, string(body))
+	}
+
+	var response struct {
+		Orders []model.OrderDetail `json:"orders"`
+	}
+	decodeJSON(t, body, &response)
+
+	if len(response.Orders) != 1 {
+		t.Fatalf("expected 1 order, got %d", len(response.Orders))
+	}
+
+	if response.Orders[0].ID != checkout.Order.ID {
+		t.Fatalf("expected order id %d, got %d", checkout.Order.ID, response.Orders[0].ID)
+	}
+
+	if len(response.Orders[0].Items) != 1 {
+		t.Fatalf("expected 1 order item, got %d", len(response.Orders[0].Items))
+	}
+
+	if response.Orders[0].Items[0].ProductID != product.ID {
+		t.Fatalf("expected product id %d, got %d", product.ID, response.Orders[0].Items[0].ProductID)
+	}
+}
+
 func registerAndLogin(t *testing.T, ts *testServer, email, role string) authSession {
 	t.Helper()
 
 	status, body := doJSONRequest(t, ts.router, http.MethodPost, "/api/auth/register", map[string]string{
+		"name":     role + " user",
 		"email":    email,
 		"password": "secret123",
 		"role":     role,

@@ -421,17 +421,20 @@ func (r *OrderRepository) ListCustomerOrders(ctx context.Context, userID int64) 
 			return nil, fmt.Errorf("scan customer order: %w", err)
 		}
 
-		items, err := r.listOrderItems(ctx, order.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		order.Items = items
 		orders = append(orders, order)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate customer orders: %w", err)
+	}
+
+	for i := range orders {
+		items, err := r.listOrderItems(ctx, orders[i].ID)
+		if err != nil {
+			return nil, err
+		}
+
+		orders[i].Items = items
 	}
 
 	return orders, nil
