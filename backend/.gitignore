@@ -1,0 +1,6 @@
+marketplace.db
+playwright.db
+.env
+node_modules/
+playwright-report/
+test-results/
