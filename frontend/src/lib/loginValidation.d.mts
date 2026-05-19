@@ -13,8 +13,17 @@ export function validateLogin(values: LoginValues): {
   values: LoginValues;
 };
 
+export type AuthUser = {
+  id: number;
+  email: string;
+  role: string;
+  name?: string;
+};
+
 export function authenticateLogin(values: LoginValues): Promise<{
   isValid: boolean;
   errors: LoginValidationErrors;
   values: LoginValues;
+  token?: string;
+  user?: AuthUser;
 }>;

@@ -1,3 +1,5 @@
+import { loginWithApi, registerWithApi } from "../services/authApi.mjs";
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const minimumPasswordLength = 8;
 
@@ -42,4 +44,53 @@ export function validateSignup(values) {
       confirmPassword,
     },
   };
+}
+
+function mapSignupError(error) {
+  if (error.status === 409) {
+    return "An account with this email already exists.";
+  }
+
+  if (error.status === 400) {
+    return "Check your email and password, then try again.";
+  }
+
+  return error.message;
+}
+
+export async function authenticateSignup(values) {
+  const result = validateSignup(values);
+
+  if (!result.isValid) {
+    return result;
+  }
+
+  try {
+    const user = await registerWithApi({
+      email: result.values.email,
+      password: result.values.password,
+      role: "customer",
+    });
+    const loginPayload = await loginWithApi({
+      email: result.values.email,
+      password: result.values.password,
+    });
+
+    return {
+      ...result,
+      token: loginPayload.token,
+      user: {
+        ...user,
+        name: result.values.name,
+      },
+    };
+  } catch (error) {
+    return {
+      ...result,
+      isValid: false,
+      errors: {
+        form: mapSignupError(error),
+      },
+    };
+  }
 }

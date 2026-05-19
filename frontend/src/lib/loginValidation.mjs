@@ -1,9 +1,8 @@
+import { userFromToken } from "./authToken.mjs";
+import { loginWithApi } from "../services/authApi.mjs";
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const minimumPasswordLength = 8;
-const demoAccount = {
-  email: "customer@smallc.test",
-  password: "correct-password",
-};
 
 export function validateLogin(values) {
   const email = values.email.trim();
@@ -32,6 +31,18 @@ export function validateLogin(values) {
   };
 }
 
+function mapLoginError(error) {
+  if (error.status === 401) {
+    return "Email or password is incorrect.";
+  }
+
+  if (error.status === 400) {
+    return "Email and password are required.";
+  }
+
+  return error.message;
+}
+
 export async function authenticateLogin(values) {
   const result = validateLogin(values);
 
@@ -39,22 +50,27 @@ export async function authenticateLogin(values) {
     return result;
   }
 
-  await new Promise((resolve) => {
-    globalThis.setTimeout(resolve, 250);
-  });
+  try {
+    const payload = await loginWithApi(result.values);
 
-  if (
-    result.values.email.toLowerCase() !== demoAccount.email ||
-    result.values.password !== demoAccount.password
-  ) {
+    const identity = userFromToken(payload.token);
+
+    return {
+      ...result,
+      token: payload.token,
+      user: {
+        id: identity?.id ?? 0,
+        email: result.values.email,
+        role: identity?.role ?? "customer",
+      },
+    };
+  } catch (error) {
     return {
       ...result,
       isValid: false,
       errors: {
-        form: "Email or password is incorrect.",
+        form: mapLoginError(error),
       },
     };
   }
-
-  return result;
 }

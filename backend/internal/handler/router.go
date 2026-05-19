@@ -35,6 +35,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	router := chi.NewRouter()
 	router.Use(chiMiddleware.Recoverer)
 	router.Use(appMiddleware.Logger)
+	router.Use(appMiddleware.CORS)
 	router.Use(appMiddleware.JSON)
 
 	router.Get("/api/health", systemHandler.Health)

@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
+import { saveAuthSession } from "@/lib/authSession.mjs";
 import { authenticateLogin, validateLogin } from "@/lib/loginValidation.mjs";
 
 type FormState = {
@@ -48,9 +49,14 @@ export function LoginForm() {
     setIsSubmitting(false);
     setErrors(result.errors);
 
-    if (!result.isValid) {
+    if (!result.isValid || !result.token) {
       return;
     }
+
+    saveAuthSession({
+      token: result.token,
+      user: result.user ?? { email: result.values.email, role: "customer", id: 0 },
+    });
 
     if (form.remember) {
       window.localStorage.setItem("smallc:rememberedEmail", result.values.email);
@@ -177,7 +183,7 @@ export function LoginForm() {
       </button>
 
       <p className="text-center text-sm text-[#60706c]">
-        Demo account: customer@smallc.test / correct-password
+        Use the email and password from your SmallC account.
       </p>
       <p className="text-center text-sm text-[#60706c]">
         New to SmallC?{" "}

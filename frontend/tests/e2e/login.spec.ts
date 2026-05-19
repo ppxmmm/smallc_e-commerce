@@ -31,7 +31,7 @@ test.describe("login page", () => {
     await expect(password).toHaveAttribute("type", "password");
   });
 
-  test("shows an error when demo credentials do not match", async ({ page }) => {
+  test("shows an error when credentials do not match", async ({ page }) => {
     await page.goto("/login");
 
     await page.getByLabel("Email").fill("customer@smallc.test");
@@ -52,9 +52,8 @@ test.describe("login page", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/home$/);
-    await expect(
-      page.locator("h1", { hasText: "New Season Sale" }),
-    ).toBeVisible();
+    await expect(page.locator("h1", { hasText: "New Season Sale" })).toBeVisible();
+    await expect(page.getByText("Seller Dashboard")).toHaveCount(0);
     const rememberedEmail = await page.evaluate(() =>
       window.localStorage.getItem("smallc:rememberedEmail"),
     );
@@ -73,8 +72,10 @@ test.describe("login page", () => {
     await expect(page.getByText("Full name is required.")).toBeVisible();
     await expect(page.getByText("Email is required.")).toBeVisible();
 
+    const signupEmail = `new-${Date.now()}@smallc.test`;
+
     await page.getByLabel("Full name").fill("SmallC Customer");
-    await page.getByLabel("Email").fill("new@smallc.test");
+    await page.getByLabel("Email").fill(signupEmail);
     await page.getByLabel("Password", { exact: true }).fill("correct-password");
     await page.getByLabel("Confirm password").fill("correct-password");
     await page.getByRole("button", { name: "Create account" }).click();
@@ -83,6 +84,6 @@ test.describe("login page", () => {
     const lastSignup = await page.evaluate(() =>
       window.sessionStorage.getItem("smallc:lastSignup"),
     );
-    expect(lastSignup).toBe("new@smallc.test");
+    expect(lastSignup).toBe(signupEmail);
   });
 });

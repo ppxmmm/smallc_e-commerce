@@ -4,7 +4,8 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { validateSignup } from "@/lib/signupValidation.mjs";
+import { saveAuthSession } from "@/lib/authSession.mjs";
+import { authenticateSignup, validateSignup } from "@/lib/signupValidation.mjs";
 
 type SignupFormState = {
   name: string;
@@ -24,6 +25,7 @@ const initialFormState: SignupFormState = {
 
 export function SignupForm() {
   const router = useRouter();
+  const formErrorId = useId();
   const nameErrorId = useId();
   const emailErrorId = useId();
   const passwordErrorId = useId();
@@ -60,16 +62,39 @@ export function SignupForm() {
     }
 
     setIsSubmitting(true);
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 250);
-    });
-    window.sessionStorage.setItem("smallc:lastSignup", validation.values.email);
+    const result = await authenticateSignup(form);
     setIsSubmitting(false);
+    setErrors(result.errors);
+
+    if (!result.isValid || !result.token) {
+      return;
+    }
+
+    saveAuthSession({
+      token: result.token,
+      user: result.user ?? { email: result.values.email, name: result.values.name },
+    });
+    window.sessionStorage.setItem("smallc:lastSignup", result.values.email);
     router.push("/home");
   }
 
   return (
-    <form className="space-y-4" noValidate onSubmit={handleSubmit}>
+    <form
+      aria-describedby={errors.form ? formErrorId : undefined}
+      className="space-y-4"
+      noValidate
+      onSubmit={handleSubmit}
+    >
+      {errors.form ? (
+        <p
+          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
+          id={formErrorId}
+          role="alert"
+        >
+          {errors.form}
+        </p>
+      ) : null}
+
       <div>
         <label className="text-sm font-bold text-[#10201d]" htmlFor="name">
           Full name
