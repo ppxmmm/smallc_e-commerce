@@ -27,16 +27,16 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(ctx context.Context, email, passwordHash, role string) (*model.User, error) {
+func (r *UserRepository) Create(ctx context.Context, name,email, passwordHash, role string) (*model.User, error) {
 	query := `
-		INSERT INTO users (email, password_hash, role)
-		VALUES (?, ?, ?)
-		RETURNING id, email, password_hash, role, created_at
+		INSERT INTO users (name, email, password_hash, role)
+		VALUES (?, ?, ?, ?)
+		RETURNING id, name, email, password_hash, role, created_at
 	`
 
 	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, email, passwordHash, role).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, name, email, passwordHash, role).
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
@@ -51,14 +51,14 @@ func (r *UserRepository) Create(ctx context.Context, email, passwordHash, role s
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, role, created_at
+		SELECT id, name, email, password_hash, role, created_at
 		FROM users
 		WHERE email = ?
 	`
 
 	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, email).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrUserNotFound
@@ -421,17 +421,20 @@ func (r *OrderRepository) ListCustomerOrders(ctx context.Context, userID int64) 
 			return nil, fmt.Errorf("scan customer order: %w", err)
 		}
 
-		items, err := r.listOrderItems(ctx, order.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		order.Items = items
 		orders = append(orders, order)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate customer orders: %w", err)
+	}
+
+	for i := range orders {
+		items, err := r.listOrderItems(ctx, orders[i].ID)
+		if err != nil {
+			return nil, err
+		}
+
+		orders[i].Items = items
 	}
 
 	return orders, nil

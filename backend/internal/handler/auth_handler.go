@@ -15,6 +15,7 @@ type AuthHandler struct {
 }
 
 type registerRequest struct {
+	Name 	string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
@@ -23,6 +24,13 @@ type registerRequest struct {
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type userResponse struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 func NewAuthHandler(authService *service.AuthService) *AuthHandler {
@@ -36,11 +44,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.Register(r.Context(), request.Email, request.Password, request.Role)
+	user, err := h.authService.Register(r.Context(), request.Name, request.Email, request.Password, request.Role)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrValidation):
-			util.WriteError(w, http.StatusBadRequest, "email, password, and role are required")
+			util.WriteError(w, http.StatusBadRequest, "name, email, password, and role are required")
 		case errors.Is(err, service.ErrInvalidRole):
 			util.WriteError(w, http.StatusBadRequest, "role must be customer, seller, or admin")
 		case errors.Is(err, repository.ErrDuplicateEmail):
@@ -51,10 +59,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	util.WriteJSON(w, http.StatusCreated, map[string]any{
-		"id":    user.ID,
-		"email": user.Email,
-		"role":  user.Role,
+	util.WriteJSON(w, http.StatusCreated, userResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		Role:  user.Role,
 	})
 }
 

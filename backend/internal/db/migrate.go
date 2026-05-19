@@ -9,6 +9,7 @@ import (
 const defaultSchema = `
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('customer', 'seller', 'admin')) DEFAULT 'customer',
@@ -45,6 +46,26 @@ CREATE TABLE IF NOT EXISTS order_items (
     price_at_purchase INTEGER NOT NULL,
     fulfillment_status TEXT NOT NULL CHECK(fulfillment_status IN ('pending', 'processing', 'shipped', 'delivered')) DEFAULT 'pending',
     FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES products(id),
+    FOREIGN KEY(seller_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS carts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cart_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    seller_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(cart_id) REFERENCES carts(id) ON DELETE CASCADE,
     FOREIGN KEY(product_id) REFERENCES products(id),
     FOREIGN KEY(seller_id) REFERENCES users(id)
 );

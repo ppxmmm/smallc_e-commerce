@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getAuthUser } from "@/lib/authSession.mjs";
 import { getCartCount, subscribeToCartUpdates } from "@/lib/cartStorage.mjs";
 import { getDisplayName } from "@/lib/displayName.mjs";

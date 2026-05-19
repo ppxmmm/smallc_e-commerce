@@ -34,11 +34,11 @@ func NewAuthService(userRepository *repository.UserRepository, jwtSecret string,
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, email, password, role string) (*model.User, error) {
+func (s *AuthService) Register(ctx context.Context,name, email,password, role string) (*model.User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	role = strings.TrimSpace(strings.ToLower(role))
 
-	if email == "" || password == "" || role == "" {
+	if name == "" || email == "" || password == "" || role == "" {
 		return nil, ErrValidation
 	}
 
@@ -51,7 +51,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, role string
 		return nil, err
 	}
 
-	return s.userRepository.Create(ctx, email, passwordHash, role)
+	return s.userRepository.Create(ctx, name ,email, passwordHash, role)
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
