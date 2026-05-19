@@ -140,7 +140,8 @@ function CartIcon() {
 
 export function StorefrontFooter() {
   return (
-    <footer className="m-3 rounded-lg border border-slate-200 bg-slate-950 px-6 py-8 text-slate-300">
+    <footer className="mt-auto w-full border-t border-slate-800 bg-slate-950 text-slate-300">
+      <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr] gap-8 max-lg:grid-cols-2 max-md:grid-cols-1">
         <div>
           <Link className="text-3xl font-black tracking-normal text-white" href="/home">
@@ -198,6 +199,7 @@ export function StorefrontFooter() {
       <div className="mt-8 flex justify-between gap-4 border-t border-slate-800 pt-5 text-sm text-slate-500 max-md:flex-col">
         <span>© 2026 smallC. All rights reserved.</span>
         <span>Privacy policy · Terms and conditions</span>
+      </div>
       </div>
     </footer>
   );

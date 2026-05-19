@@ -19,6 +19,8 @@ type OrdersPageProps = {
   onSignOut: () => void;
 };
 
+let orderConfirmationHandled = false;
+
 export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
   const [showConfirmation] = useState(readOrderPlacedFlag);
   const [confirmationTotals] = useState(readOrderSummary);
@@ -27,52 +29,22 @@ export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem("smallc:orderPlaced");
-      window.sessionStorage.removeItem("smallc:orderSummary");
-    }
-  }, []);
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function loadOrders() {
-      try {
-        setLoading(true);
-        setError("");
-        const token = getAuthToken();
-        const nextOrders = await fetchCustomerOrders(token ?? "");
-        if (isActive) {
-          setOrders(nextOrders);
-        }
-      } catch (loadError) {
-        if (isActive) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load orders.");
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
-      }
+    if (orderConfirmationHandled) {
+      return;
     }
 
-    loadOrders();
+    const placed = window.sessionStorage.getItem("smallc:orderPlaced") === "true";
+    if (!placed) {
+      return;
+    }
 
-    return () => {
-      isActive = false;
-    };
+    orderConfirmationHandled = true;
+    window.sessionStorage.removeItem("smallc:orderPlaced");
+    setShowConfirmation(true);
   }, []);
-
-  const latestOrder = orders[0];
-  const orderRows = orders.map((order) => [
-    `SC${String(order.id).padStart(8, "0")}`,
-    sentenceCase(order.status),
-    summarizeFulfillment(order.items),
-    formatBaht(order.total_amount),
-  ]);
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="flex min-h-screen flex-col bg-white text-slate-950">
       <CustomerHeader onSignOut={onSignOut} userEmail={userEmail} />
 
       <section className="m-3 grid gap-5 max-xl:grid-cols-1 xl:grid-cols-[320px_320px_1fr]">

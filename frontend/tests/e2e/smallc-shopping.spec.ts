@@ -15,7 +15,7 @@ test.describe("customer storefront", () => {
     await expect(page.locator("h1", { hasText: "New Season Sale" })).toBeVisible();
     await page.locator("#shop").scrollIntoViewIfNeeded();
     await page.getByTestId("global-search").fill("soundcore");
-    await expect(page.getByRole("heading", { name: "Soundcore Life Q30" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Soundcore Life Q30" }).first()).toBeVisible();
 
     await page.getByTestId("add-product-1").first().click();
     await page.getByTestId("cart-button").click();
@@ -29,8 +29,11 @@ test.describe("customer storefront", () => {
     await expect(page).toHaveURL(/\/checkout$/);
 
     await page.getByRole("button", { name: "Place Order" }).click();
-    await expect(page).toHaveURL(/\/orders$/);
-    await expect(page.getByText("Thank you for your order!")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Processing Payment..." })).toBeVisible();
+    await expect(page).toHaveURL(/\/orders$/, { timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Thank you for your order!" }),
+    ).toBeVisible();
   });
 
   test("shop search exposes an empty state", async ({ page }) => {

@@ -90,7 +90,7 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
   }, [category, products, query, sort]);
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="flex min-h-screen flex-col bg-white text-slate-950">
       <CustomerHeader onSignOut={onSignOut} userEmail={userEmail} />
 
       {cartMessage ? (
@@ -107,22 +107,35 @@ export function CustomerStorefront({ userEmail, onSignOut }: CustomerStorefrontP
         className="mx-2 grid min-h-[320px] grid-cols-[0.65fr_1.35fr] overflow-hidden rounded-b-lg border border-t-0 border-slate-200 bg-gradient-to-r from-slate-50 via-white to-emerald-50 px-16 py-14 max-md:grid-cols-1 max-md:px-6"
       >
         <div className="self-center">
-          <h1 className="max-w-xl text-6xl font-black leading-none tracking-normal max-md:text-4xl">
+          <h1
+            className="animate-hero-fade-up max-w-xl text-6xl font-black leading-none tracking-normal max-md:text-4xl"
+            style={{ animationDelay: "0ms" }}
+          >
             New Season Sale
           </h1>
-          <p className="mt-5 text-2xl text-slate-700 max-md:text-lg">
+          <p
+            className="animate-hero-fade-up mt-5 text-2xl text-slate-700 max-md:text-lg"
+            style={{ animationDelay: "120ms" }}
+          >
             Up to 50% off selected items
           </p>
           <a
-            className="mt-8 inline-flex h-12 items-center rounded-lg bg-emerald-600 px-8 font-bold text-white hover:bg-emerald-700"
+            className="animate-hero-fade-up mt-8 inline-flex h-12 items-center rounded-lg bg-emerald-600 px-8 font-bold text-white shadow-md shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 active:translate-y-0"
             href="#shop"
+            style={{ animationDelay: "240ms" }}
           >
             Shop Now
           </a>
         </div>
         <div className="grid grid-cols-3 gap-5 max-md:mt-8">
-          {products.slice(0, 6).map((product) => (
-            <ProductArt product={product} key={product.id} large />
+          {products.slice(0, 6).map((product, index) => (
+            <div
+              className="animate-hero-scale-in"
+              key={product.id}
+              style={{ animationDelay: `${360 + index * 90}ms` }}
+            >
+              <ProductArt product={product} large />
+            </div>
           ))}
         </div>
       </section>

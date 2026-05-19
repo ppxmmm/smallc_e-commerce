@@ -40,7 +40,7 @@ export function ProductDetailPage({
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="flex min-h-screen flex-col bg-white text-slate-950">
       <CustomerHeader onSignOut={onSignOut} userEmail={userEmail} />
 
       {cartMessage ? (
