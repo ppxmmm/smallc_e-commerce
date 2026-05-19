@@ -12,16 +12,25 @@ type OrdersPageProps = {
   onSignOut: () => void;
 };
 
+let orderConfirmationHandled = false;
+
 export function OrdersPage({ userEmail, onSignOut }: OrdersPageProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const totals = calculateCart(getCart(), getAppliedCoupon());
 
   useEffect(() => {
-    const placed = window.sessionStorage.getItem("smallc:orderPlaced") === "true";
-    setShowConfirmation(placed);
-    if (placed) {
-      window.sessionStorage.removeItem("smallc:orderPlaced");
+    if (orderConfirmationHandled) {
+      return;
     }
+
+    const placed = window.sessionStorage.getItem("smallc:orderPlaced") === "true";
+    if (!placed) {
+      return;
+    }
+
+    orderConfirmationHandled = true;
+    window.sessionStorage.removeItem("smallc:orderPlaced");
+    setShowConfirmation(true);
   }, []);
 
   return (
