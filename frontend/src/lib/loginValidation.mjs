@@ -1,3 +1,4 @@
+import { getDisplayName } from "./displayName.mjs";
 import { userFromToken } from "./authToken.mjs";
 import { loginWithApi } from "../services/authApi.mjs";
 
@@ -61,6 +62,7 @@ export async function authenticateLogin(values) {
       user: {
         id: identity?.id ?? 0,
         email: result.values.email,
+        name: getDisplayName({ email: result.values.email }),
         role: identity?.role ?? "customer",
       },
     };

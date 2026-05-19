@@ -1,5 +1,9 @@
 "use client";
 
+import { getAuthUser } from "@/lib/authSession.mjs";
+import { getDisplayName } from "@/lib/displayName.mjs";
+import { HeaderUserMenu } from "@/components/storefront/HeaderUserMenu";
+
 type SellerDashboardProps = {
   userEmail?: string;
   onSignOut: () => void;
@@ -22,6 +26,12 @@ const productRows = [
 const navItems = ["Dashboard", "Orders", "Products", "Inventory", "Reports"];
 
 export function SellerDashboard({ userEmail, onSignOut }: SellerDashboardProps) {
+  const authUser = getAuthUser();
+  const displayName = getDisplayName({
+    name: authUser?.name,
+    email: userEmail ?? authUser?.email,
+  });
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-4">
@@ -31,16 +41,7 @@ export function SellerDashboard({ userEmail, onSignOut }: SellerDashboardProps) 
           </a>
           <p className="mt-1 text-sm text-slate-500">Seller workspace</p>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          {userEmail ? <span className="text-slate-600">Signed in as {userEmail}</span> : null}
-          <button
-            className="font-bold text-emerald-700 hover:text-emerald-900"
-            onClick={onSignOut}
-            type="button"
-          >
-            Sign out
-          </button>
-        </div>
+        {displayName ? <HeaderUserMenu displayName={displayName} onSignOut={onSignOut} /> : null}
       </header>
 
       <section
