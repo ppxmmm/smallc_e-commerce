@@ -1,0 +1,10 @@
+./admin_handler.go
+./auth_handler.go
+./customer_handler.go
+./order_handler.go
+./payment_handler.go
+./product_handler.go
+./router.go
+./router_phase1.go
+./seller_handler.go
+./system_handler.go
