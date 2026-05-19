@@ -10,7 +10,7 @@ const (
 
 type User struct {
 	ID           int64     `json:"id"`
-	Name 		 string    `json:"name"`
+	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
 	Role         string    `json:"role"`
@@ -32,13 +32,42 @@ const (
 )
 
 type Product struct {
-	ID          int64     `json:"id"`
-	SellerID    int64     `json:"seller_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       int64     `json:"price"`
-	Stock       int64     `json:"stock"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID             int64      `json:"id"`
+	SellerID       int64      `json:"seller_id"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Category       string     `json:"category"`
+	Brand          string     `json:"brand"`
+	Price          int64      `json:"price"`
+	Original       *int64     `json:"original"`
+	Rating         float64    `json:"rating"`
+	Stock          int64      `json:"stock"`
+	Tone           string     `json:"tone"`
+	Subtitle       string     `json:"subtitle"`
+	Image          string     `json:"image"`
+	Features       []string   `json:"features"`
+	Highlights     []string   `json:"highlights"`
+	Specifications [][]string `json:"specifications"`
+	Delivery       string     `json:"delivery"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type ProductInput struct {
+	Name           string
+	Description    string
+	Category       string
+	Brand          string
+	Price          int64
+	Original       *int64
+	Rating         float64
+	Stock          int64
+	Tone           string
+	Subtitle       string
+	Image          string
+	Features       []string
+	Highlights     []string
+	Specifications [][]string
+	Delivery       string
 }
 
 type Order struct {
