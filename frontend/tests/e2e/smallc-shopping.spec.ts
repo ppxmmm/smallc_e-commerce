@@ -15,7 +15,7 @@ test.describe("customer storefront", () => {
     await expect(page.locator("h1", { hasText: "New Season Sale" })).toBeVisible();
     await page.locator("#shop").scrollIntoViewIfNeeded();
     await page.getByTestId("global-search").fill("soundcore");
-    await expect(page.getByRole("heading", { name: "Soundcore Life Q30" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Soundcore Life Q30" }).first()).toBeVisible();
 
     await page.getByTestId("add-product-1").first().click();
     await page.getByTestId("cart-button").click();

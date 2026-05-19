@@ -67,6 +67,7 @@ export async function authenticateSignup(values) {
 
   try {
     const user = await registerWithApi({
+      name: result.values.name,
       email: result.values.email,
       password: result.values.password,
       role: "customer",

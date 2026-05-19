@@ -30,9 +30,15 @@ test.describe("wishlist", () => {
     await page.getByLabel("Favourites with 1 items").click();
     await expect(page).toHaveURL(/\/wishlist$/);
     await expect(page.getByRole("heading", { name: "Favourites" })).toBeVisible();
-    await expect(page.getByRole("link", { name: productName })).toBeVisible();
+    await expect(
+      page.getByRole("listitem").filter({ hasText: productName }),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: "Remove" }).click();
+    await page
+      .getByRole("listitem")
+      .filter({ hasText: productName })
+      .getByRole("button", { name: "Remove" })
+      .click();
     await expect(page.getByText("No favourites yet.")).toBeVisible();
   });
 
@@ -45,7 +51,12 @@ test.describe("wishlist", () => {
       .click();
 
     await page.getByLabel("Favourites with 1 items").click();
-    await page.getByRole("button", { name: "Add to cart" }).click();
+    await expect(page).toHaveURL(/\/wishlist$/);
+    await page
+      .getByRole("listitem")
+      .filter({ hasText: productName })
+      .getByRole("button", { name: "Add to cart" })
+      .click();
 
     await expect(page.getByRole("status")).toContainText(`Added ${productName} to cart`);
     await page.getByTestId("cart-button").click();

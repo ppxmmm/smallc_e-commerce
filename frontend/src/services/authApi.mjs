@@ -7,9 +7,9 @@ export async function loginWithApi({ email, password }) {
   });
 }
 
-export async function registerWithApi({ email, password, role = "customer" }) {
+export async function registerWithApi({ name, email, password, role = "customer" }) {
   return apiRequest("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, password, role }),
+    body: JSON.stringify({ name, email, password, role }),
   });
 }
