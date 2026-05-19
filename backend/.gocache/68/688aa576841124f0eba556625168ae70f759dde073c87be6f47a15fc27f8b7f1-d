@@ -1,9 +1,0 @@
-./admin_ping_handler.go
-./auth_handler.go
-./customer_handler.go
-./order_handler.go
-./payment_handler.go
-./product_handler.go
-./router.go
-./seller_ping_handler.go
-./system_handler.go
