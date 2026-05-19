@@ -15,6 +15,7 @@ type AuthHandler struct {
 }
 
 type registerRequest struct {
+	Name 	string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
@@ -36,7 +37,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.Register(r.Context(), request.Email, request.Password, request.Role)
+	user, err := h.authService.Register(r.Context(), request.Email, request.Name,request.Password, request.Role)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrValidation):
@@ -53,6 +54,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	util.WriteJSON(w, http.StatusCreated, map[string]any{
 		"id":    user.ID,
+		"name":  user.Name,
 		"email": user.Email,
 		"role":  user.Role,
 	})

@@ -27,16 +27,16 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(ctx context.Context, email, passwordHash, role string) (*model.User, error) {
+func (r *UserRepository) Create(ctx context.Context, name,email, passwordHash, role string) (*model.User, error) {
 	query := `
-		INSERT INTO users (email, password_hash, role)
-		VALUES (?, ?, ?)
-		RETURNING id, email, password_hash, role, created_at
+		INSERT INTO users (name, email, password_hash, role)
+		VALUES (?, ?, ?, ?)
+		RETURNING id, name, email, password_hash, role, created_at
 	`
 
 	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, email, passwordHash, role).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, name, email, passwordHash, role).
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
@@ -51,14 +51,14 @@ func (r *UserRepository) Create(ctx context.Context, email, passwordHash, role s
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, role, created_at
+		SELECT id, name, email, password_hash, role, created_at
 		FROM users
 		WHERE email = ?
 	`
 
 	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, email).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+		Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrUserNotFound
